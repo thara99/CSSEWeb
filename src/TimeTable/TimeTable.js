@@ -23,6 +23,23 @@ import NativeSelect from '@material-ui/core/NativeSelect';
 import { SettingsInputCompositeTwoTone } from '@material-ui/icons';
 import axios from 'axios';
 
+import moment from "moment";
+import DateFnsUtils from "@date-io/date-fns";
+import {
+  MuiPickersUtilsProvider,
+  KeyboardTimePicker,
+} from "@material-ui/pickers";
+
+
+
+
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert from '@mui/material/Alert';
+
+const Alert = React.forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
+
 
 
 
@@ -34,11 +51,12 @@ const useStyles = makeStyles((theme) => ({
     height: '100vh',
   },
   image: {
-    backgroundImage: 'url(https://res.cloudinary.com/dxz8wbaqv/image/upload/v1631639062/SPM%20Project/Tharaka/s-migaj-b2qszO9C7sw-unsplash_qvuxks.jpg)',
+    // backgroundImage: 'url(https://res.cloudinary.com/dxz8wbaqv/image/upload/v1631639062/SPM%20Project/Tharaka/s-migaj-b2qszO9C7sw-unsplash_qvuxks.jpg)',
+    backgroundImage: 'url(https://res.cloudinary.com/dxz8wbaqv/image/upload/v1633803142/SPM%20Project/Tharaka/13199_ip8uzz.jpg)',
     backgroundRepeat: 'no-repeat',
     backgroundColor:
       theme.palette.type === 'light' ? theme.palette.grey[50] : theme.palette.grey[900],
-    backgroundSize: 'cover',
+    backgroundSize: "cover",
     backgroundPosition: 'center',
   },
   paper: {
@@ -72,28 +90,94 @@ const useStyles = makeStyles((theme) => ({
 export default function SignInSide() {
   const classes = useStyles();
 
+  const INITIAL_VALUES = {
+    route: "",
+    vehicalNumber: "",
+    startTime: null,
+    endTime: null,
+    startLocation: "",
+    endLocation: "",
+    open: false,
+  };
+
+
+  const handleClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setValues({...values, open: false})
+
+  };
+
+
+
+
+  const [values, setValues] = React.useState(INITIAL_VALUES);
+
+
+
   const onSubmit = async (e) =>{
     e.preventDefault()
-    const data = {
-     
-    }
-}
+
+    let formValues = {
+      route: values.route,
+      vehicalNumber: values.vehicalNumber,
+      startTime: moment(values.startTime).format('LTS'),
+      endTime: moment(values.endTime).format('LTS'),
+      startLocation: values.startLocation,
+      endLocation: values.endLocation,
+    };
 
 
-  
+    const datax = await axios.post(
+        "http://localhost:4000/api/v1/route/addroute",
+        formValues
+    );
+
+    setValues({...values, open: true})
+
+    // console.log("form values", formValues)
+    // setValues(INITIAL_VALUES)
+  }
+
+  const resetForm = () =>{
+    setValues({
+      route: "",
+      vehicalNumber: "",
+      startTime: null,
+      endTime: null,
+      startLocation: "",
+      endLocation: "",
+      open: false
+    })
+  }
+
+
   return (
     <Grid container component="main" className={classes.root}>
       <CssBaseline />
       <Grid item xs={false} sm={4} md={7} className={classes.image} />
       <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square>
         <div className={classes.paper}>
-          <Typography component="h1" variant="h5">
-            Time Tables
+          <Typography component="h1" variant="h4" color={"primary"} >
+            <b>Time Tables</b>
+
           </Typography>
+          <Snackbar open={values.open} autoHideDuration={2000} onClose={handleClose}>
+            <Alert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
+              Successfully Inserted!
+            </Alert>
+          </Snackbar>
           <form className={classes.form} onSubmit = {onSubmit} noValidate>
 
           <TextField
               margin="normal"
+              variant="outlined"
+              value={values.route}
+              onChange={(e) =>
+                  setValues({ ...values, route: e.target.value })
+              }
               required
               fullWidth
               id="routeNum"
@@ -109,55 +193,107 @@ export default function SignInSide() {
               id="vehiNum"
               label="Vehicle Number"
               name="vehiNum"
-              autoFocus
+              variant="outlined"
+              value={values.vehicalNumber}
+              onChange={(e) =>
+                  setValues({ ...values, vehicalNumber: e.target.value })
+              }
             />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="startTime"
-              label="Deparcher Time"
-              name="startTime"
-              autoFocus
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="endTime"
-              label="Arrival Time"
-              name="endTime"
-              autoFocus
-            />
+
+
+            <MuiPickersUtilsProvider utils={DateFnsUtils}>
+                <KeyboardTimePicker
+                    style={{ width: "100%" }}
+                    inputVariant="outlined"
+                    autoOk
+                    margin="normal"
+                    // id="time-picker"
+                    label="Departure Time*"
+                    value={values.startTime}
+                    onChange={(time) =>
+                        setValues({
+                          ...values,
+                          startTime: time
+                        })
+                    }
+                    KeyboardButtonProps={{
+                      "aria-label": "change time",
+                    }}
+                />
+
+              <KeyboardTimePicker
+                  style={{ width: "100%" }}
+                  inputVariant="outlined"
+                  autoOk
+                  margin="normal"
+                  // id="time-picker"
+                  label="Arrival Time*"
+                  value={values.endTime}
+                  onChange={(time) =>
+                      setValues({
+                        ...values,
+                        endTime: time
+                      })
+                  }
+                  KeyboardButtonProps={{
+                    "aria-label": "change time",
+                  }}
+              />
+            </MuiPickersUtilsProvider>
+
+
+
             <TextField
               margin="normal"
               required
               fullWidth
               id="from"
-              label="From"
+              label="Start location"
               name="from"
-              autoFocus
+              variant="outlined"
+              value={values.startLocation}
+              onChange={(e) =>
+                  setValues({ ...values, startLocation: e.target.value })
+              }
             />
               <TextField
               margin="normal"
               required
               fullWidth
               id="to"
-              label="To"
+              label="End location"
               name="to"
-              autoFocus
+              variant="outlined"
+              value={values.endLocation}
+              onChange={(e) =>
+                  setValues({ ...values, endLocation: e.target.value })
+              }
             />
 
 
   
             <Button
+              style={{marginRight: 50, width: 250, height: 50, fontSize: 16}}
               type="submit"
-              fullWidth
+              // fullWidth
               variant="contained"
               color="primary"
               className={classes.submit}
             >
-              ADD
+              <b>ADD</b>
+
+            </Button>
+
+            <Button
+                style={{ width: 100, height: 50, fontSize: 16, backgroundColor: "white", borderWidth: "2px", borderStyle: "solid", borderColor: "#e7e7e7", color: "#808080"}}
+                // fullWidth
+                variant="contained"
+                color="primary"
+                className={classes.submit}
+                onClick={resetForm}
+            >
+              <b>Reset</b>
+
             </Button>
        
           
