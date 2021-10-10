@@ -19,10 +19,11 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { mainListItems } from './listItems';
 import Chart from './Chart';
-import TotalMembers from './TotalMembers';
-import Orders from './TimeTable';
-import TotalFare from './TotalFare';
-import TicketInspection from './TicketInspection';
+import axios from "axios";
+import {useState} from "react";
+import MaterialTable from "material-table";
+import moment from "moment";
+import Title from "./Title";
 
 
 
@@ -75,11 +76,117 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 
 const mdTheme = createTheme();
 
+
+
+
+
+
+
+
+
+
 function DashboardContent() {
   const [open, setOpen] = React.useState(true);
   const toggleDrawer = () => {
     setOpen(!open);
   };
+
+    const [columns, setColumns] = useState([
+        { title: "Route No.", field: "route" },
+        { title: "From", field: "startLocation" },
+        { title: "To", field: "endLocation" },
+        { title: "Departure Time", field: "endTime", type: "time" },
+        { title: "Arrival Time", field: "startTime" },
+    ]);
+
+    const [journey, setJourney] = React.useState([]);
+
+
+
+
+
+
+    const [adminValues, setAdminValues] = React.useState({
+        totFare: null,
+        totInspections: null,
+    });
+
+    const [members, setMembers] = React.useState();
+
+
+
+
+    React.useEffect(async () => {
+        let data = await axios.get(
+            "http://localhost:4000/api/v1/route/getroutes"
+        );
+
+        setJourney(data.data.timeTable);
+
+
+
+        let adminData = await axios.get(
+            "https://blackcode-bus-ticketing-system.herokuapp.com/api/v1/user/admindata"
+        );
+
+
+
+        setAdminValues({...adminValues,
+            totFare: adminData.data.finalAmount,
+            totInspections: adminData.data.finalCount[0].inspectionCount});
+
+
+        let userData = await axios.get(
+            "http://blackcode-bus-ticketing-system.herokuapp.com/api/v1/user/allusers"
+        );
+
+        setMembers(userData.data.userCount);
+
+
+    }, []);
+
+
+
+
+
+
+
+
+    const updateRoute = async (newData) => {
+        // console.log("new dataaa", newData)
+        // console.log("new data iddd", newData._id)
+        await axios.put("http://localhost:4000/api/v1/route/updateroute/" + newData._id,newData)
+            .then((res)=>{
+                // alert("Successfully Updated")
+            })
+            .catch((err)=>{
+                alert(err.message)
+            })
+    }
+
+    const deleteRoute = async (oldData) => {
+        // console.log("new dataaa", newData)
+        // console.log("new data iddd", newData._id)
+        await axios.delete("http://localhost:4000/api/v1/route/deleteroute/" + oldData._id)
+            .then((res)=>{
+                // alert("Successfully Deleted")
+            })
+            .catch((err)=>{
+                alert(err.message)
+            })
+    }
+
+
+
+
+
+
+
+
+
+
+
+
 
   return (
     <ThemeProvider theme={mdTheme}>
@@ -171,10 +278,13 @@ function DashboardContent() {
                     p: 2,
                     display: 'flex',
                     flexDirection: 'column',
-                    height: 240,
+                    height: 150,
                   }}
                 >
-                  <TotalMembers />
+                    <Title>Total Members</Title>
+                    <Typography component="p" variant="h4">
+                        {members}
+                    </Typography>
                 </Paper>
               </Grid>
                {/* Total Fare */}
@@ -184,10 +294,13 @@ function DashboardContent() {
                     p: 2,
                     display: 'flex',
                     flexDirection: 'column',
-                    height: 240,
+                    height: 150,
                   }}
                 >
-                  <TotalFare />
+                    <Title>Total Fare</Title>
+                    <Typography component="p" variant="h4">
+                        {adminValues.totFare}
+                    </Typography>
                 </Paper>
               </Grid>
               {/* Number of inspection */}
@@ -197,17 +310,67 @@ function DashboardContent() {
                     p: 2,
                     display: 'flex',
                     flexDirection: 'column',
-                    height: 240,
+                    height: 150,
                   }}
                 >
-                  <TicketInspection />
+                    <Title>Number of Inspections</Title>
+                    <Typography component="p" variant="h4">
+                        {adminValues.totInspections}
+                    </Typography>
                 </Paper>
               </Grid>
               {/* Recent Orders */}
               <Grid item xs={12}>
-                <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
-                  <Orders />
-                </Paper>
+                {/*<Paper sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>*/}
+                {/*  <Orders />*/}
+                {/*</Paper>*/}
+                  <MaterialTable
+                      style={{ padding: 20, marginTop: 30 }}
+                      title=""
+                      columns={columns}
+                      data={journey}
+                      options={{
+                          exportButton: true,
+                          rowStyle: (rowData) => ({
+                              backgroundColor: rowData.tableData.id % 2 === 0 ? "#EEE" : "#FFF",
+                          }),
+                          headerStyle: {
+                              backgroundColor: "#3f51b5",
+                              color: "#fff",
+                          },
+                          pageSize: 5,
+                          actionsColumnIndex: -1,
+                          paging: true,
+                      }}
+                      editable={{
+                          onRowUpdate: (newData, oldData) =>
+                              new Promise((resolve, reject) => {
+                                  setTimeout(() => {
+                                      const dataUpdate = [...journey];
+                                      const index = oldData.tableData.id;
+                                      dataUpdate[index] = newData;
+                                      setJourney([...dataUpdate]);
+
+                                      updateRoute(newData);
+
+                                      resolve();
+                                  }, 1000);
+                              }),
+                          onRowDelete: (oldData) =>
+                              new Promise((resolve, reject) => {
+                                  setTimeout(() => {
+                                      const dataDelete = [...journey];
+                                      const index = oldData.tableData.id;
+                                      dataDelete.splice(index, 1);
+                                      setJourney([...dataDelete]);
+
+                                      deleteRoute(oldData);
+
+                                      resolve();
+                                  }, 1000);
+                              }),
+                      }}
+                  />
               </Grid>
             </Grid>
           </Container>
